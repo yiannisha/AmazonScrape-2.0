@@ -7,6 +7,8 @@ import scrapy
 
 
 class AmazonItem(scrapy.Item):
+    """AmazonItem."""
+
     # define the fields for your item here like:
     name = scrapy.Field()
     min_price = scrapy.Field()
