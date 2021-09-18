@@ -3,7 +3,7 @@
 import re
 import os
 
-import scrapy
+import scrapy  # type: ignore
 
 from ..items import AmazonItem
 
@@ -17,6 +17,7 @@ class AmazonSpider(scrapy.Spider):
     # start_urls set when creating, in AmazonScrape.py
     start_urls = [
         'https://www.amazon.com/gp/movers-and-shakers/electronics',
+        #'https://www.amazon.com/HP-Chromebook-11-inch-Laptop-11a-na0010nr/dp/B08HJT1BKQ?_encoding=UTF8&psc=1'
     ]
 
     def __init__(self):
@@ -24,8 +25,8 @@ class AmazonSpider(scrapy.Spider):
         # Add start_urls if check run detected
         if os.environ.get('SCRAPY_CHECK'):
             self.start_urls = [
-            'https://www.amazon.com/gp/movers-and-shakers/books/',
-            'https://www.amazon.com/gp/movers-and-shakers/electronics',
+                'https://www.amazon.com/gp/movers-and-shakers/books/',
+                'https://www.amazon.com/gp/movers-and-shakers/electronics',
             ]
 
     def collect_data(self, elem):
@@ -41,13 +42,12 @@ class AmazonSpider(scrapy.Spider):
         pattern = r'Sales rank: ([\d,]*)'
         text = elem.css('span.zg-sales-movement::text').get()
         try:
-            sale_rank = re.search(pattern, text).groups()[0]
+            sale_rank = self._clean_price(pattern, text)
         except TypeError:
             # Messages for debugging
             print('{} Sales Movement Text: {}'.format(self._get_no(elem), text))
 
-        sale_rank = int(sale_rank.replace(',', ''))
-        item['sales_rank'] = sale_rank
+        item['sales_rank'] = int(sale_rank)
 
         # sales percentage
         # Previously unranked products do not have a sales percentage
@@ -60,7 +60,7 @@ class AmazonSpider(scrapy.Spider):
             pattern = r'([\d,]*)'
             text = elem.css('span.zg-percent-change::text').get()
             try:
-                sales_perc = re.search(pattern, text).groups()[0]
+                sales_perc = self._clean_price(pattern, text)
             except TypeError:
                 # Message for debugging
                 print('{} Sales Percentage Text: {}'.format(self._get_no(elem), text))
@@ -81,32 +81,104 @@ class AmazonSpider(scrapy.Spider):
         # image url
         item['img_url'] = elem.css('a.a-link-normal div img::attr(src)').get()
 
-        # TEMPORARY
-        # min_price and max_price
-        # price = elem.css('span.p13n-sc-price::text').get()
-        item['min_price'], item['max_price'] = self.get_prices(elem, item['url'])
-
         return item
 
-    def get_prices(self, elem, url):
+    def get_listing_prices(self, elem):
         '''
-        Returns a tuple based on prices found:
-        (None, None) : if no price is found
+        Return a tuple of float prices if any have been found:
+        None : if no price is found or offers exist
         (num, num) : if only a single price is found (num : <float>)
         (num1, num2) : if two or more prices are found (num1 : <float>, num2 : <float> | num1 < num2)
 
         :param elem: li element Selector object
-        :param url: product's url -> <string>
         '''
 
+        prices = []
+
+        # check for offers
+        offers = elem.css('span.a-color-secondary::text').get()
+        if offers:
+            self.log('{} has offers'.format(self._get_no(elem)))
+            return None
+
         # search product's listing
+        pattern = r'.?([\d\.]*)'
+        prices.extend([
+            self._clean_price(pattern, price.strip())
+            # get all prices in product's listing
+            for price in elem.css('span.p13n-sc-price::text').getall()
+        ])
+        # in case no prices are catalogued on product's listing
+        if not prices:
+            return None
 
-        # search product's page
-        # TODO : create Request to product's page
-        # TODO: create secondary method to be used as a callback function
-        raise NotImplementedError
-
+        min_price, max_price = min(prices), max(prices)
         return min_price, max_price
+
+    def get_product_page_prices(self, response):
+        '''
+        Return a tuple of float prices if any have been found:
+        None, None: if no price is found
+        (num, num) : if only a single price is found (num : <float>)
+        (num1, num2) : if two or more prices are found (num1 : <float>, num2 : <float> | num1 < num2)
+
+        :param response: Response object to be scraped
+        '''
+
+        prices = []
+
+        # check availability
+        avbl = (response.css('div#availability span::text').get().strip() == 'Currently unavailable')
+        if avbl:
+            self.log('Currently unavailable, returning None')
+            # return None if not available
+            return None, None
+
+        # get prices from option A
+        pattern = r'?([\d.,]*)'
+        price = self._clean_price(pattern, response.css('span.a-offscreen::text').get().strip())
+        if price:
+            prices.append(price)
+
+        # get prices from option B
+        list_of_prices = [self._clean_price(pattern, price.strip())
+                          for price in response.css('span.slot-price span::text').getall()
+                          if price.strip()
+                          ]
+
+        # get all prices from page
+        prices.extend(list_of_prices)
+
+        # remove zeros
+        prices = [price for price in prices if price > 0]
+
+        return min(prices), max(prices)
+
+    def _clean_price(self, pattern, price):
+        '''
+        Return a float from string of price.
+
+        :param pattern: regex pattern to get first group of
+        :param price: string of price to clean
+        '''
+        # debugging log messages
+        # self.log('Clean Prices Input: {}'.format(price))
+        price = float(re.search(pattern, price).groups()[0].replace(',', ''))
+        # print('Clean Prices Output: {}'.format(price))
+        return price
+
+    def _request_product_page(self, item):
+        '''
+        Initiate a Request to the item["url"].
+
+        :param item: AmazonItem object
+        '''
+        self.log('Queuing Request for {}'.format(item['name']))
+        request = scrapy.Request(url=item['url'],
+                                 callback=self.parse_from_page,
+                                 cb_kwargs=dict(item=item))
+        self.log('URL: {}'.format(item['url']))
+        yield request
 
     def _get_no(self, elem):
         '''
@@ -118,13 +190,30 @@ class AmazonSpider(scrapy.Spider):
         list_num = elem.css('span.zg-badge-text::text').get()
         return list_num
 
+    def parse_from_page(self, response, item):
+        '''
+        Search page for prices.
+        Yield AmazonItem object with prices found. (None if not)
+
+        :param response: Response object returned from scrapy's engine.
+        :param item: AmazonItem with partially filled data
+        '''
+
+        self.log("Making request for {} page".format(item['name']))
+        # get prices from product's page
+        item['min_price'], item['max_price'] = self.get_product_page_prices(response)
+
+        yield item
+
     def parse(self, response):
         '''
-        Data is scraped.
-        Further requests are made.
+        Yield AmazonItem object if product's prices are found;
+        Make new Request if product's prices not found.
 
         @url https://www.amazon.com/gp/movers-and-shakers/electronics
         @scrapes sales_rank sales_perc url name img_url min_price max_price
+
+        :param response: Response object returned from scrapy's engine
         '''
 
         # assign response to a class variable to be used widely
@@ -134,4 +223,17 @@ class AmazonSpider(scrapy.Spider):
         li_elems = response.css('li.zg-item-immersion')
 
         for elem in li_elems:
-            yield self.collect_data(elem)
+            # get AmazonItem from collect_data with fields min_price, max_price empty
+            elem_item = self.collect_data(elem)
+            # get prices from product listing
+            prices = self.get_listing_prices(elem)
+
+            if prices:
+                elem_item['min_price'], elem_item['max_price'] = prices
+                yield elem_item
+                continue
+            else:
+                self.log('{} Prices: {}'.format(self._get_no(elem), prices))
+                # if no prices in product listing
+                self._request_product_page(elem_item)
+                continue
