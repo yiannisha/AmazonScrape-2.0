@@ -3,10 +3,10 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-from scrapy import signals
+from scrapy import signals # type: ignore
 
 # useful for handling different item types with a single interface
-from itemadapter import is_item, ItemAdapter
+from itemadapter import is_item, ItemAdapter # type: ignore
 
 
 class ScrapyBackendSpiderMiddleware:
@@ -101,3 +101,30 @@ class ScrapyBackendDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
+
+class UserAgentMiddleware():
+    '''
+    Apply User Agents to requests to product pages.
+    '''
+
+    def apply_user_agent(self, request):
+        '''
+        Return a Request object with changed User Agent.
+
+        :param request: Request object to have User Agent changed.
+        '''
+        user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 142.0.0.22.109 (iPhone12,5; iOS 14_1; en_US; en-US; scale=3.00; 1242x2688; 214888322) NW/1'
+
+        request.headers['User-Agent'] = user_agent
+
+        return request
+
+    def process_request(self, request, spider):
+        '''
+        Change Request User Agent if it is a request to a product page.
+        '''
+        # Check request url
+        if 'movers-and-shakers' not in request.url:
+            request = self.apply_user_agent(request)
+        # for debugging
+            spider.log('Request Headers: {}'.format(request.headers))
