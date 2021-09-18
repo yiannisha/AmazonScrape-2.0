@@ -19,6 +19,7 @@ class AmazonSpider(scrapy.Spider):
         'https://www.amazon.com/gp/movers-and-shakers/electronics',
         #'https://www.amazon.com/HP-Chromebook-11-inch-Laptop-11a-na0010nr/dp/B08HJT1BKQ?_encoding=UTF8&psc=1'
     ]
+    allowed_domains = ['amazon.com']
 
     def __init__(self):
         """scrapy.Spider __init__."""
@@ -171,6 +172,9 @@ class AmazonSpider(scrapy.Spider):
         '''
         Initiate a Request to the item["url"].
 
+        !!!DOES NOT WORK FOR SOME REASON!!!
+        (yield request must be in parse making this method obsolete)
+
         :param item: AmazonItem object
         '''
         self.log('Queuing Request for {}'.format(item['name']))
@@ -178,6 +182,7 @@ class AmazonSpider(scrapy.Spider):
                                  callback=self.parse_from_page,
                                  cb_kwargs=dict(item=item))
         self.log('URL: {}'.format(item['url']))
+        self.log('Request: {}'.format(request))
         yield request
 
     def _get_no(self, elem):
@@ -233,7 +238,13 @@ class AmazonSpider(scrapy.Spider):
                 yield elem_item
                 continue
             else:
-                self.log('{} Prices: {}'.format(self._get_no(elem), prices))
                 # if no prices in product listing
-                self._request_product_page(elem_item)
+                # Unfortunately, if the code below is put into another function
+                # it doesn't work. Still haven't found out why.
+                self.log('Queuing Request for {}'.format(elem_item['name']))
+                request = scrapy.Request(url=elem_item['url'],
+                                         callback=self.parse_from_page,
+                                         cb_kwargs=dict(item=elem_item))
+                yield request
+                #self._request_product_page(elem_item)
                 continue
