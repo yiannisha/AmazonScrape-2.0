@@ -248,3 +248,10 @@ class AmazonSpider(scrapy.Spider):
                 yield request
                 #self._request_product_page(elem_item)
                 continue
+
+        # follow next page if there is one
+        try:
+            next = response.css('li.a-last a')[0]
+            yield response.follow(next, callback=self.parse)
+        except IndexError:
+            pass
