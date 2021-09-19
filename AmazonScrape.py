@@ -2,10 +2,10 @@
 
 import sys
 
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
+from scrapy.crawler import CrawlerProcess # type: ignore
+from scrapy.utils.project import get_project_settings # type: ignore
 
-from scrapy_backend.scrapy_backend.spiders.amazon_spider import AmazonSpider
+from scrapy_backend.scrapy_backend.spiders.amazon_spider import AmazonSpider # type: ignore
 
 def get_categories():
     '''
