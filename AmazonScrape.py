@@ -7,15 +7,9 @@ from scrapy.utils.project import get_project_settings # type: ignore
 
 from scrapy_backend.scrapy_backend.spiders.amazon_spider import AmazonSpider # type: ignore
 
-def get_categories():
-    '''
-    Returns a dictionary with numbers as keys, categories as values -> {1 : 'fashion',...}
-    '''
-    pass
+from scrapy_backend.categories import categories # type: ignore
 
 if __name__ == '__main__':
-
-    categories = get_categories()
 
     # default values
 
