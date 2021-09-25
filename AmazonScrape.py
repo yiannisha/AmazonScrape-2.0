@@ -92,7 +92,7 @@ if __name__ == '__main__':
     # read input
     args = parse_from_cli()
     # debug only
-    print(args)
+    # print(args)
 
     # create a CrawlerProcess
     settings = get_project_settings()
