@@ -1,0 +1,38 @@
+1,Patio, Lawn & Garden
+2,Magazine Subscriptions
+3,CDs & Vinyl
+4,Apps & Games
+5,Sports Collectibles
+6,Gift Cards
+7,Collectible Currencies
+8,Camera & Photo Products
+9,Office Products
+10,Audible Books & Originals
+11,Software
+12,Tools & Home Improvement
+13,Baby
+14,Grocery & Gourmet Food
+15,Handmade Products
+16,Automotive
+17,Amazon Devices & Accessories
+18,Amazon Launchpad
+19,Clothing, Shoes & Jewelry
+20,Toys & Games
+21,Books
+22,Digital Educational Resources
+23,Health & Household
+24,Computers & Accessories
+25,Movies & TV
+26,Appliances
+27,Arts, Crafts & Sewing
+28,Cell Phones & Accessories
+29,Video Games
+30,Beauty & Personal Care
+31,Home & Kitchen
+32,Musical Instruments
+33,Kitchen & Dining
+34,Kindle Store
+35,Sports & Outdoors
+36,Entertainment Collectibles
+37,Pet Supplies
+38,Electronics
