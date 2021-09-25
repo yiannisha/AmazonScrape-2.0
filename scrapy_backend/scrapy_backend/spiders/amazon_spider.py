@@ -15,14 +15,28 @@ class AmazonSpider(scrapy.Spider):
 
     name = 'amazon'
     # start_urls set when creating, in AmazonScrape.py
-    start_urls = [
-        'https://www.amazon.com/gp/movers-and-shakers/electronics',
+
+    # start_urls for debugging only
+    #start_urls = [
+        #'https://www.amazon.com/gp/movers-and-shakers/electronics',
         #'https://www.amazon.com/HP-Chromebook-11-inch-Laptop-11a-na0010nr/dp/B08HJT1BKQ?_encoding=UTF8&psc=1'
-    ]
+    #]
+
     allowed_domains = ['amazon.com']
 
-    def __init__(self):
-        """scrapy.Spider __init__."""
+    def __init__(self, start_urls, limit):
+        '''
+        scrapy.Spider __init__
+
+        :param start_urls: List[<str>] url to start from
+        :param limit: <int> The limit of results to return.
+        '''
+
+        self.start_urls = start_urls
+
+        self.limit = limit
+        self.limit_counter = 0
+
         # Add start_urls if check run detected
         if os.environ.get('SCRAPY_CHECK'):
             self.start_urls = [
@@ -228,6 +242,10 @@ class AmazonSpider(scrapy.Spider):
         li_elems = response.css('li.zg-item-immersion')
 
         for elem in li_elems:
+            # check that limit hasn't been passed
+            if self.limit_counter >= self.limit:
+                break
+
             # get AmazonItem from collect_data with fields min_price, max_price empty
             elem_item = self.collect_data(elem)
             # get prices from product listing
@@ -235,6 +253,7 @@ class AmazonSpider(scrapy.Spider):
 
             if prices:
                 elem_item['min_price'], elem_item['max_price'] = prices
+                self.limit_counter += 1
                 yield elem_item
                 continue
             else:
