@@ -8,8 +8,9 @@ from scrapy.crawler import CrawlerProcess # type: ignore
 from scrapy.utils.project import get_project_settings # type: ignore
 
 from scrapy_backend.scrapy_backend.spiders.amazon_spider import AmazonSpider # type: ignore
-
 from scrapy_backend.categories import categories # type: ignore
+
+from pkg_install.pkg_installer import PackageInstaller
 
 def parse_from_cli():
     '''
@@ -87,6 +88,10 @@ def validate_args(args):
     return args
 
 if __name__ == '__main__':
+
+    # install scrapy if it is not
+    pkg_installer = PackageInstaller()
+    pkg_installer.run()
 
     # default values are incorporated into parse_from_cli
     # read input
