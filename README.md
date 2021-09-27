@@ -15,7 +15,8 @@ AmazonScrape will iterate through all of the specified category's items and coll
  * Product's Image URL
 
 ## How it Works
-AmazonScrape uses a bunch of simple python scripts to scrape data for every item in the specified Movers & Shakers category.
+AmazonScrape uses a scrapy backend to scrape data from product listings and product pages. AmazonScrape
+bypasses CAPTCHA-protected product pages by using User Agents when accessing them.
 The data is then written to a csv, json or jl (json lines) file.
 
 ## How to Setup
